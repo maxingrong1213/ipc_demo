@@ -55,6 +55,30 @@
             tools:layout_editor_absoluteX="166dp"
             tools:layout_editor_absoluteY="273dp" />
 
+        <Button
+            android:id="@+id/btn_send_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="send_message"
+            tools:layout_editor_absoluteX="166dp"
+            tools:layout_editor_absoluteY="273dp" />
+
+        <Button
+            android:id="@+id/btn_registerlistener"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="registerlistener"
+            tools:layout_editor_absoluteX="166dp"
+            tools:layout_editor_absoluteY="273dp" />
+
+        <Button
+            android:id="@+id/btn_unregisterlistener"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="unregisterlistener"
+            tools:layout_editor_absoluteX="166dp"
+            tools:layout_editor_absoluteY="273dp" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
