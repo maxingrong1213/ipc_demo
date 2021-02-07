@@ -95,6 +95,11 @@ public class RemoteService extends Service {
 
         @Override
         public boolean isConnected() throws RemoteException {
+            if (isconnected) {
+                Log.d("MXRMXR","has connected");
+            } else {
+                Log.d("MXRMXR","has disconnected");
+            }
             return isconnected;
         }
     };

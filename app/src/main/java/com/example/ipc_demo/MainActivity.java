@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         button_connect.setOnClickListener(this);
         button_connect_oneway.setOnClickListener(this);
         button_disconnect.setOnClickListener(this);
-        button_disconnect.setOnClickListener(this);
+        button_isconnected.setOnClickListener(this);
 
         button_sendmessage.setOnClickListener(this);
         button_registerlistener.setOnClickListener(this);
@@ -116,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_is_connected:
                 try {
                     boolean isconnect = connectionServiceProxy.isConnected();
-                    Log.d("MXRMXR","isconnect is"+ isconnect);
+                    Log.d("MXRMXR","isconnect is :"+ isconnect);
                     //Toast.makeText(this,String.valueOf(isconnect),Toast.LENGTH_LONG).show();
                 } catch (RemoteException e) {
                     e.printStackTrace();
