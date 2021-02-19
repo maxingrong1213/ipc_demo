@@ -2,9 +2,12 @@ package com.example.ipc_demo;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.Messenger;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.util.Log;
 import android.widget.Toast;
@@ -25,9 +28,35 @@ import java.util.concurrent.TimeUnit;
 public class RemoteService extends Service {
 
     private boolean isconnected = false;
-    //用于切回主线程，去显示Toast
-    private Handler handler = new Handler(Looper.getMainLooper());
 
+    //用于切回主线程，去显示Toast
+    private Handler handler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(android.os.Message msg) {
+            super.handleMessage(msg);
+            Messenger clientMessenger = msg.replyTo;
+            Bundle bundle = msg.getData();
+            bundle.setClassLoader(Message.class.getClassLoader());
+            Message message = bundle.getParcelable("message");
+            Toast.makeText(RemoteService.this, message.getContent(), Toast.LENGTH_SHORT).show();
+
+            try {
+                Message reply = new Message();
+                reply.setContent("message reply from remote");
+                android.os.Message data = new android.os.Message();
+                data.replyTo = clientMessenger;
+                bundle = new Bundle();
+                bundle.putParcelable("message", reply);
+                data.setData(bundle);
+                clientMessenger.send(data);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
+    private Messenger messenger = new Messenger(handler);
+    private RemoteCallbackList<MessageReceiveListener> messageReceiveListenerRemoteCallbackList = new RemoteCallbackList<>();
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
     private ScheduledFuture scheduledFuture;
     // 其中connect()、disconnect()、isConnected()都是在子进程的线程池中的，Toast要在主线程中才会显示出来。
@@ -47,17 +76,19 @@ public class RemoteService extends Service {
                 scheduledFuture = scheduledThreadPoolExecutor.scheduleAtFixedRate(new Runnable() {
                     @Override
                     public void run() {
-                        for (MessageReceiveListener messageReceiveListener : messageReceiveListenerArrayList) {
+                        int size = messageReceiveListenerRemoteCallbackList.beginBroadcast();
+                        for (int i = 0; i < size; i++) {
                             Message message = new Message();
-                            message.setContent("this message form remote");
+                            message.setContent("this message from remote");
                             try {
-                                messageReceiveListener.onReceiveMessage(message);
+                                messageReceiveListenerRemoteCallbackList.getBroadcastItem(i).onReceiveMessage(message);
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
                         }
+                        messageReceiveListenerRemoteCallbackList.finishBroadcast();
                     }
-                },5000,5000, TimeUnit.MILLISECONDS);
+                }, 5000, 5000, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -72,9 +103,25 @@ public class RemoteService extends Service {
                     @Override
                     public void run() {
                         Log.d("MXRMXR","connect_oneway");
-                        //Toast.makeText(RemoteService.this,"connect_oneway",Toast.LENGTH_LONG).show();
+                        //Toast.makeText(RemoteService.this,"connect",Toast.LENGTH_LONG).show();
                     }
                 });
+                scheduledFuture = scheduledThreadPoolExecutor.scheduleAtFixedRate(new Runnable() {
+                    @Override
+                    public void run() {
+                        int size = messageReceiveListenerRemoteCallbackList.beginBroadcast();
+                        for (int i = 0; i < size; i++) {
+                            Message message = new Message();
+                            message.setContent("this message from remote");
+                            try {
+                                messageReceiveListenerRemoteCallbackList.getBroadcastItem(i).onReceiveMessage(message);
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        messageReceiveListenerRemoteCallbackList.finishBroadcast();
+                    }
+                }, 5000, 5000, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -105,15 +152,13 @@ public class RemoteService extends Service {
     };
 
 
-    private ArrayList<MessageReceiveListener> messageReceiveListenerArrayList = new ArrayList<>();
-
     private IMessageService messageService = new IMessageService.Stub() {
         @Override
         public void sendMessage(Message message) throws RemoteException {
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    Log.d("MXRMXR","connect");
+                    Log.d(RemoteService.class.getSimpleName(), String.valueOf(message.getContent()));
                     //Toast.makeText(RemoteService.this,"  ",Toast.LENGTH_LONG).show();
                 }
             });
@@ -127,21 +172,17 @@ public class RemoteService extends Service {
         @Override
         public void registerMessageReceiveListener(MessageReceiveListener messageReceiveListener) throws RemoteException {
             if(messageReceiveListener != null) {
-                messageReceiveListenerArrayList.add(messageReceiveListener);
+                messageReceiveListenerRemoteCallbackList.register(messageReceiveListener);
             }
         }
 
         @Override
         public void unRegisterMessageReceiveListener(MessageReceiveListener messageReceiveListener) throws RemoteException {
             if(messageReceiveListener != null) {
-                messageReceiveListenerArrayList.remove(messageReceiveListener);
+                messageReceiveListenerRemoteCallbackList.unregister(messageReceiveListener);
             }
         }
 
-        @Override
-        public IBinder asBinder() {
-            return null;
-        }
     };
 
     private IServiceManager serviceManager = new IServiceManager.Stub(){
@@ -151,11 +192,12 @@ public class RemoteService extends Service {
                 return connectionService.asBinder();
             }else if (IMessageService.class.getSimpleName().equals(serviceName)){
                 return messageService.asBinder();
-            }else {
+            }else if (Messenger.class.getSimpleName().equals(serviceName)) {
+                return messenger.getBinder();
+            } else {
                 return null;
             }
         }
-
     };
 
 

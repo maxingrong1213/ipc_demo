@@ -51,4 +51,9 @@ public class Message implements android.os.Parcelable{
     public void setSendSuccess(boolean sendSuccess) {
         isSendSuccess = sendSuccess;
     }
+
+    public void readFromParcel(Parcel reply) {
+        content = reply.readString();
+        isSendSuccess = reply.readByte() == 1;
+    }
 }
